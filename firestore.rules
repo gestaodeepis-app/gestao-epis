@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logged() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function active() {
+      return logged() && userDoc().status == "ATIVO";
+    }
+
+    function isOwner() {
+      return active() && (userDoc().isOwner == true || userDoc().role == "PROPRIETARIO");
+    }
+
+    function isAdmin() {
+      return active() && (isOwner() || userDoc().role == "ADMINISTRADOR");
+    }
+
+    function isSSMA() {
+      return active() && (isAdmin() || userDoc().role == "SSMA");
+    }
+
+    function isViewer() {
+      return active() && (isSSMA() || userDoc().role == "VISUALIZADOR");
+    }
+
+    function samePlant(plantId) {
+      return isAdmin() || userDoc().plantId == plantId || userDoc().plantId == "TODAS";
+    }
+
+    match /system/{doc} {
+      allow read: if isOwner();
+      allow write: if isOwner();
+    }
+
+    match /users/{uid} {
+      allow read: if active() && (uid == request.auth.uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /plants/{plantId} {
+      allow read: if active();
+      allow write: if isAdmin();
+    }
+
+    match /employees/{employeeId} {
+      allow read: if isViewer();
+      allow create, update: if isSSMA() && samePlant(request.resource.data.plantId);
+      allow delete: if isAdmin();
+    }
+
+    match /epis/{epiId} {
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+
+    match /stock/{stockId} {
+      allow read: if isViewer();
+      allow create, update: if isSSMA() && samePlant(request.resource.data.plantId);
+      allow delete: if isAdmin();
+    }
+
+    match /movements/{movementId} {
+      allow read: if isViewer();
+      allow create: if isSSMA() && samePlant(request.resource.data.plantId);
+      // Histórico de EPI deve ser imutável: correções devem ocorrer por estorno.
+      allow update, delete: if false;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow create: if active();
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if active();
+      allow create, update: if isSSMA();
+      allow delete: if isAdmin();
+    }
+  }
+}
