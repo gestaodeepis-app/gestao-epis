@@ -1,12 +1,12 @@
 // Copie este arquivo para firebase-config.js e preencha com os dados do seu projeto.
 export const firebaseConfig = {
-  apiKey: "SUA_API_KEY_REAL",
+    apiKey: "AIzaSyBELkl5XVtzIjj0H1tJhngZmETi3GH6rFM",
   authDomain: "gestaodeepis-6693f.firebaseapp.com",
   projectId: "gestaodeepis-6693f",
   storageBucket: "gestaodeepis-6693f.firebasestorage.app",
-  messagingSenderId: "SEU_NUMERO",
-  appId: "SEU_APP_ID",
-  measurementId: "SEU_MEASUREMENT_ID"
+  messagingSenderId: "652716663927",
+  appId: "1:652716663927:web:99096129a2b1cb4a741272",
+  measurementId: "G-P9CH9WVNHY"
 };
 
 /*
