@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#10151c" />
+  <title>Gestão de EPIs</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css?v=2.0.3" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+</head>
+<body>
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card auth-card">
+      <div class="login-logo"><img id="loginBrandLogo" src="./logo-symbol.png" alt="Logo"></div>
+      <h1>Gestão de EPIs</h1>
+      <p id="authCardSubtitle">Entre com sua conta autorizada.</p>
+      <div class="auth-tabs">
+        <button id="loginTabBtn" type="button" class="active">Entrar</button>
+        <button id="registerTabBtn" type="button">Solicitar acesso</button>
+      </div>
+      <form id="loginForm" class="auth-form">
+        <label>E-mail<input id="loginEmail" type="email" autocomplete="username" required></label>
+        <label>Senha<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+        <div id="loginError" class="login-error"></div>
+        <button class="primary login-button" type="submit">Entrar</button>
+      </form>
+      <form id="registerForm" class="auth-form hidden">
+        <label>Nome completo<input id="registerName" autocomplete="name" required></label>
+        <label>E-mail<input id="registerEmail" type="email" autocomplete="email" required></label>
+        <label>Senha<input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required></label>
+        <label>Confirmar senha<input id="registerPassword2" type="password" autocomplete="new-password" minlength="6" required></label>
+        <div id="registerError" class="login-error"></div>
+        <button class="primary login-button" type="submit">Enviar solicitação</button>
+        <small class="register-help">Seu cadastro ficará aguardando aprovação do Proprietário do Sistema.</small>
+      </form>
+      <small id="loginNote" class="login-note">Acesso restrito a usuários cadastrados e ativos.</small>
+    </div>
+  </div>
+
+  <div id="accessPendingScreen" class="login-screen hidden">
+    <div class="login-card pending-access-card">
+      <div id="pendingStateIcon" class="pending-state-icon waiting">⌛</div>
+      <span id="pendingStateKicker" class="section-kicker">SOLICITAÇÃO ENVIADA</span>
+      <h1 id="pendingStateTitle">Aguardando aprovação</h1>
+      <p id="pendingStateText">Seu cadastro foi recebido. O Proprietário do Sistema precisa definir sua função e usina antes de liberar o acesso.</p>
+      <div class="pending-user-box">
+        <strong id="pendingUserName">Usuário</strong>
+        <span id="pendingUserEmail">-</span>
+        <small id="pendingLastCheck">Verificando aprovação...</small>
+      </div>
+      <button id="pendingEnterBtn" class="primary login-button hidden" type="button">Entrar no sistema</button>
+      <button id="pendingLogoutBtn" class="secondary login-button" type="button">Sair desta conta</button>
+    </div>
+  </div>
+
+  <div id="app">
+    <div id="mobileMenuOverlay" class="mobile-menu-overlay"></div>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><img id="sidebarBrandLogo" class="brand-icon" src="./logo-symbol.png" alt="Logo da empresa"></div>
+        <div class="brand-text"><strong id="sidebarCompanyName">Gestão de EPIs</strong><small id="sidebarSystemName">Gestão de EPIs</small></div>
+      </div>
+
+      <nav id="menu">
+        <button class="nav-item active" data-view="dashboard"><span class="nav-icon">▦</span><span>Painel</span></button>
+        <button class="nav-item" data-view="movimentacoes"><span class="nav-icon">⇄</span><span>Entregas / Devoluções</span></button>
+        <button class="nav-item" data-view="colaboradores"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21c.7-4.6 3.2-7 7.5-7s6.8 2.4 7.5 7"></path></svg></span><span>Colaboradores</span></button>
+        <button class="nav-item" data-view="leitorqr"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5"></path><path d="M15 4h5v5"></path><path d="M20 15v5h-5"></path><path d="M9 20H4v-5"></path><path d="M8 8h3v3H8z"></path><path d="M14 8h2v2h-2z"></path><path d="M14 14h3v3h-3z"></path><path d="M8 14h2v2H8z"></path></svg></span><span>Leitor QR</span></button>
+        <button class="nav-item" data-view="epis"><span class="nav-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14a8 8 0 0 1 16 0"></path><path d="M3 14h18v3H3z"></path><path d="M8 14V9"></path><path d="M16 14V9"></path></svg></span><span>EPIs</span></button>
+        <button class="nav-item" data-view="relatorios"><span class="nav-icon">▤</span><span>Relatórios</span></button>
+        <button class="nav-item" data-view="usuarios"><span class="nav-icon">◉</span><span>Usuários</span></button>
+        <button class="nav-item" data-view="auditoria"><span class="nav-icon">↶</span><span>Auditoria</span></button>
+        <div class="nav-separator"></div><button class="nav-item" data-view="configuracoes"><span class="nav-icon">⚙</span><span>Configurações</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-card">
+          <strong id="userName">Usuário</strong>
+          <span id="userRole">Carregando</span>
+          <small id="userPlant">-</small>
+        </div>
+        <div class="system-version">Sistema <span id="systemVersionLabel">v2.0.3</span></div><button id="logoutBtn" class="logout-btn">Sair</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="Abrir menu">☰</button>
+        <div class="topbar-title">
+          <h1 id="pageTitle">Painel geral</h1>
+          <p id="pageSubtitle">Indicadores do controle de EPIs.</p>
+        </div>
+        <div class="topbar-tools v17-tools">
+          <button id="notificationBtn" class="top-icon-btn notification-trigger" type="button" aria-label="Notificações">
+            <span class="bell-icon">♢</span><span id="notificationBadge" class="notification-badge hidden">0</span>
+          </button>
+          <div id="onlineChip" class="top-status-chip online"><span class="status-dot"></span><span>Online</span></div>
+          <label class="dashboard-plant-control" id="dashboardPlantWrap">Visão
+            <select id="dashboardPlantFilter"><option value="">Todas as usinas</option></select>
+          </label>
+          <button id="currentUserChip" class="user-top-chip" type="button" onclick="navTo('usuarios')">
+            <span id="topUserAvatar" class="top-user-avatar">U</span>
+            <span class="top-user-copy"><strong id="topUserName">Usuário</strong><small id="topUserRole">Perfil</small></span>
+          </button>
+          <button id="installAppBtn" class="install-app-btn hidden" type="button" onclick="installPwa()">
+            <span class="install-app-icon">↓</span><span><strong>Instalar app</strong><small>Usar como aplicativo</small></span>
+          </button>
+          <button id="systemUpdateBtn" class="system-update-btn hidden" type="button" onclick="forceSystemUpdate()"><span class="update-dot"></span><span><strong>Atualização disponível</strong><small>Atualizar sistema</small></span></button>
+          <button id="globalSearchBtn" class="global-search-trigger" type="button" aria-label="Buscar no sistema"><span class="search-glass">⌕</span><span class="search-copy"><strong>Buscar</strong><small>Colaborador, EPI ou movimentação</small></span><kbd>Ctrl K</kbd></button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active">
+        <div class="dashboard-heading-row">
+          <div><span class="section-kicker">VISÃO EXECUTIVA</span><h2>Resumo operacional</h2></div>
+          <button class="ghost-action" type="button" onclick="openNotificationPanel()">Ver notificações</button>
+        </div>
+        <div class="cards" id="kpis"></div>
+        <div id="quickActions" class="quick-actions"></div>
+        <div class="dashboard-lower-grid">
+          <div class="panel chart-panel">
+            <div class="panel-head chart-head"><div><h3>Entregas × Devoluções</h3><p>Movimentações dos últimos 6 meses.</p></div><div class="chart-legend"><span><i class="legend-delivery"></i>Entregas</span><span><i class="legend-return"></i>Devoluções</span></div></div>
+            <div id="movementChart" class="movement-chart"></div>
+          </div>
+          <div class="panel recent-panel">
+            <div class="panel-head"><h3>Últimas movimentações</h3></div>
+            <div class="table-wrap"><table><thead><tr><th>Data</th><th>Colaborador</th><th>EPI</th><th>Tipo</th><th>Assinatura</th></tr></thead><tbody id="recentMoves"></tbody></table></div>
+          </div>
+        </div>
+        <div class="dashboard-insights-grid">
+          <div class="panel"><div class="panel-head"><div><h3>Estoque por usina</h3><p class="panel-subtitle">Distribuição atual dos itens disponíveis.</p></div></div><div id="stockByPlant" class="insight-list"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>EPIs mais entregues</h3><p class="panel-subtitle">Ranking dos últimos 30 dias.</p></div></div><div id="topEpis" class="ranking-list"></div></div>
+          <div class="panel"><div class="panel-head"><div><h3>Atenções do sistema</h3><p class="panel-subtitle">Itens que exigem ação.</p></div></div><div id="dashboardAttention" class="attention-list"></div></div>
+        </div>
+
+        <div class="panel stock-intelligence-panel">
+          <div class="panel-head">
+            <div><span class="section-kicker">INTELIGÊNCIA DE ESTOQUE</span><h3>Previsão de reposição</h3><p class="panel-subtitle">Consumo médio calculado pelas entregas dos últimos 90 dias.</p></div>
+            <div class="stock-intelligence-legend"><span><i class="ok"></i>Normal</span><span><i class="warning"></i>Atenção</span><span><i class="critical"></i>Crítico</span></div>
+          </div>
+          <div id="stockForecastGrid" class="stock-forecast-grid"></div>
+        </div>
+      </section>
+
+      <section id="movimentacoes" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h3>Entregas e Devoluções</h3>
+              <p id="movementPeriodLabel" class="panel-subtitle">Exibindo os últimos 6 meses.</p>
+            </div>
+            <div class="panel-head-actions">
+              <button id="movementArchiveBtn" class="secondary archive-toggle-btn" type="button" onclick="toggleMovementArchive()">Consultar histórico anterior</button>
+              <button class="primary action-ssma" onclick="openMovementModal()">+ Registrar</button>
+            </div>
+          </div>
+          <div class="filters">
+            <input id="movSearch" placeholder="Buscar colaborador ou EPI..." oninput="resetMovementPage()">
+            <select id="movType" onchange="resetMovementPage()"><option value="">Todos os tipos</option><option>Entrega</option><option>Devolução</option></select>
+            <select id="movSignature" onchange="resetMovementPage()"><option value="">Todas as assinaturas</option><option value="ASSINADO">Assinado</option><option value="PENDENTE">Pendente</option></select>
+          </div>
+          <div id="movementArchiveInfo" class="archive-info hidden"></div>
+          <div class="table-wrap"><table><thead><tr><th>Data</th><th>Tipo</th><th>Colaborador</th><th>Usina</th><th>EPI</th><th>Qtd.</th><th>Tamanho</th><th>Destino devolução</th><th>Assinatura</th><th>Observações</th><th>Ações</th></tr></thead><tbody id="movementsTable"></tbody></table></div>
+          <div class="pagination-bar">
+            <span id="movementPageInfo">0 registros</span>
+            <div>
+              <button id="movementPrevBtn" class="secondary" type="button" onclick="changeMovementPage(-1)">Anterior</button>
+              <button id="movementNextBtn" class="secondary" type="button" onclick="changeMovementPage(1)">Próxima</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="colaboradores" class="view">
+        <div class="panel">
+          <div class="panel-head"><h3>Colaboradores</h3><div class="panel-head-actions"><div class="view-switch"><button id="employeeCardsBtn" type="button" class="active" onclick="setEmployeeView('cards')">▦ Cards</button><button id="employeeListBtn" type="button" onclick="setEmployeeView('list')">☷ Lista</button></div><button class="primary action-ssma" onclick="openEmployeeModal()">+ Cadastrar</button></div></div>
+          <div class="filters"><input id="empSearch" placeholder="Buscar por nome ou matrícula..." oninput="renderEmployees()"></div>
+          <div id="employeeCards" class="entity-card-grid"></div>
+          <div id="employeeListWrap" class="table-wrap hidden"><table><thead><tr><th>Nome</th><th>Matrícula</th><th>Função</th><th>Usina</th><th>Status</th><th>Última entrega</th><th>Ações</th></tr></thead><tbody id="employeesTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="leitorqr" class="view">
+        <div class="qr-reader-page">
+          <div class="panel qr-reader-panel">
+            <div class="panel-head">
+              <div>
+                <span class="section-kicker">ACESSO RÁPIDO</span>
+                <h3>Leitor de QR dos colaboradores</h3>
+                <p class="panel-subtitle">Aponte a câmera para o QR impresso na ficha física do colaborador.</p>
+              </div>
+            </div>
+
+            <div class="qr-reader-layout">
+              <div class="qr-camera-card">
+                <div id="qrCameraIdle" class="qr-camera-idle">
+                  <div class="qr-camera-symbol"><span></span><span></span><span></span><span></span></div>
+                  <strong>Leitor pronto</strong>
+                  <p>Use a câmera traseira do celular para localizar automaticamente a ficha do colaborador.</p>
+                  <button class="primary" type="button" onclick="startQrScanner()">Abrir câmera</button>
+                </div>
+
+                <div id="qrCameraActive" class="qr-camera-active hidden">
+                  <video id="qrVideo" playsinline muted></video>
+                  <div class="qr-scan-overlay"><div class="qr-scan-frame"><i></i></div></div>
+                  <div class="qr-camera-actions">
+                    <span id="qrScannerStatus">Procurando QR Code...</span>
+                    <button class="secondary" type="button" onclick="stopQrScanner()">Fechar câmera</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="qr-reader-side">
+                <div class="qr-reader-help">
+                  <h4>Como funciona</h4>
+                  <div><b>1</b><span>Abra a câmera pelo botão ao lado.</span></div>
+                  <div><b>2</b><span>Aponte para o QR da ficha física.</span></div>
+                  <div><b>3</b><span>A ficha do colaborador será aberta automaticamente.</span></div>
+                </div>
+                <div class="qr-manual-search">
+                  <span>Ou localizar sem QR</span>
+                  <input id="qrEmployeeSearch" placeholder="Digite o nome do colaborador..." oninput="renderQrEmployeeSuggestions()" autocomplete="off">
+                  <div id="qrEmployeeSuggestions" class="qr-employee-suggestions"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="epis" class="view">
+        <div class="panel">
+          <div class="panel-head"><h3>Catálogo de EPIs por Usina</h3><div class="panel-head-actions"><div class="view-switch"><button id="epiCardsBtn" type="button" class="active" onclick="setEpiView('cards')">▦ Cards</button><button id="epiListBtn" type="button" onclick="setEpiView('list')">☷ Lista</button></div><button class="primary action-ssma" onclick="openEpiModal()">+ Cadastrar EPI</button></div></div>
+          <div class="filters compact-filters"><select id="epiPlantFilter" onchange="renderEpis()"><option value="">Todas as usinas</option></select></div>
+          <div id="epiCards" class="entity-card-grid epi-card-grid"></div>
+          <div id="epiListWrap" class="table-wrap hidden"><table><thead><tr><th>Usina</th><th>EPI</th><th>C.A.</th><th>Unidade</th><th>Tamanhos</th><th>Estoque</th><th>Mínimo</th><th>Consumo/mês</th><th>Autonomia</th><th>Situação</th><th>Ações</th></tr></thead><tbody id="episTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="relatorios" class="view">
+        <div class="panel report-panel">
+          <div class="panel-head"><h3>Relatório geral de EPIs</h3></div>
+          <div class="report-filters">
+            <label>Colaborador
+              <input id="reportEmployeeSearch" list="reportEmployeeSuggestions" placeholder="Digite o nome do colaborador..." autocomplete="off">
+              <datalist id="reportEmployeeSuggestions"></datalist>
+              <input id="reportEmployeeId" type="hidden">
+            </label>
+            <label>Usina
+              <select id="reportPlant"><option value="">Todas as usinas</option></select>
+            </label>
+            <label>Registros a partir de<input id="reportFrom" type="date"></label>
+            <label>Registros até<input id="reportTo" type="date"></label>
+          </div>
+          <div class="report-summary" id="reportSummary">Defina os filtros e gere o relatório.</div>
+          <div id="reportArchiveHint" class="report-archive-hint hidden">O período selecionado contém registros anteriores aos últimos 6 meses.</div>
+          <div class="report-actions">
+            <button id="reportLoadArchiveBtn" class="secondary" type="button" onclick="loadReportArchive()">Carregar histórico anterior</button>
+            <button class="primary" onclick="printFilteredReport()">Gerar relatório / PDF</button>
+            <button class="secondary" onclick="downloadFilteredCSV()">Exportar para Excel</button>
+            <button class="secondary" onclick="clearReportFilters()">Limpar filtros</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="usuarios" class="view">
+        <div class="panel">
+          <div class="panel-head">
+            <div><span class="section-kicker">ADMINISTRAÇÃO DE ACESSO</span><h3>Usuários e perfis</h3><p class="panel-subtitle">Somente o Proprietário pode aprovar, definir função, usina, bloquear ou reativar acessos.</p></div>
+            <div class="view-switch"><button id="userCardsBtn" type="button" class="active" onclick="setUserView('cards')">▦ Cards</button><button id="userListBtn" type="button" onclick="setUserView('list')">☷ Lista</button></div>
+          </div>
+          <div class="user-admin-summary">
+            <button class="user-summary-card pending" onclick="setUserStatusFilter('PENDENTE')"><strong id="pendingUsersCount">0</strong><span>Aguardando aprovação</span></button>
+            <button class="user-summary-card active" onclick="setUserStatusFilter('ATIVO')"><strong id="activeUsersCount">0</strong><span>Usuários ativos</span></button>
+            <button class="user-summary-card blocked" onclick="setUserStatusFilter('BLOQUEADO')"><strong id="blockedUsersCount">0</strong><span>Bloqueados</span></button>
+            <button class="user-summary-card all" onclick="setUserStatusFilter('')"><strong id="allUsersCount">0</strong><span>Total</span></button>
+          </div>
+          <div class="filters user-filters">
+            <input id="userSearch" placeholder="Buscar por nome ou e-mail..." oninput="renderUsers()">
+            <select id="userStatusFilter" onchange="renderUsers()"><option value="">Todos os status</option><option value="PENDENTE">Pendentes</option><option value="ATIVO">Ativos</option><option value="BLOQUEADO">Bloqueados</option></select>
+          </div>
+          <div id="userCards" class="entity-card-grid user-card-grid"></div>
+          <div id="userListWrap" class="table-wrap hidden"><table><thead><tr><th>Foto</th><th>Nome</th><th>E-mail</th><th>Status</th><th>Perfil</th><th>Usina</th><th>Último acesso</th><th>Ações</th></tr></thead><tbody id="usersTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="auditoria" class="view">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Log de auditoria</h3><p class="panel-subtitle">Rastreabilidade das ações realizadas no sistema.</p></div>
+            <div id="auditBulkActions" class="audit-bulk-actions hidden">
+              <button id="auditRemoveSelectedBtn" class="secondary danger-soft" type="button" onclick="removeSelectedAudits()" disabled>Remover selecionados <span id="auditSelectedCount">0</span></button>
+              <button class="secondary danger-soft" type="button" onclick="removeAllAudits()">Remover tudo</button>
+            </div>
+          </div>
+          <div class="audit-select-bar">
+            <label class="audit-select-all"><input id="auditSelectAll" type="checkbox" onchange="toggleAllAudits(this.checked)"> Selecionar todos</label>
+            <span id="auditTotalLabel"></span>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th class="check-col"></th><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Registro</th><th>Ações</th></tr></thead><tbody id="auditTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <section id="configuracoes" class="view">
+        <div class="settings-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>Empresa e relatórios</h3></div>
+            <form id="companyForm" class="settings-form">
+              <label>Nome da empresa<input id="companyName" placeholder="Nome da empresa" required></label>
+              <label>Logo da empresa<input id="companyLogoFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+              <div class="logo-preview-wrap"><div class="company-logo-preview"><img id="companyLogoPreview" src="./logo-symbol.png" alt="Prévia"></div><div><strong>Prévia</strong><small>A logo aparece no menu e nos relatórios.</small></div></div>
+              <div class="settings-actions"><button type="button" class="secondary" id="removeCompanyLogo">Remover logo</button><button class="primary" type="submit">Salvar configurações</button></div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Usinas / Unidades</h3><button class="primary" onclick="openPlantModal()">+ Adicionar usina</button></div>
+            <div id="plantsGrid" class="plant-grid"></div>
+          </div>
+          <div class="panel system-settings-panel">
+            <div class="panel-head"><div><h3>Sistema</h3><p class="panel-subtitle">Versão, conexão e atualização.</p></div></div>
+            <div class="system-info-grid">
+              <div class="system-info-item"><span>Versão instalada</span><strong id="settingsVersion">v2.0.3</strong></div>
+              <div class="system-info-item"><span>Conexão</span><strong id="settingsConnection">Online</strong></div>
+              <div class="system-info-item"><span>Última verificação</span><strong id="settingsLastCheck">Agora</strong></div>
+            </div>
+            <div id="pwaInstallStatus" class="pwa-install-status"><span class="status-dot"></span><div><strong>Aplicativo Web</strong><small id="pwaInstallStatusText">Disponível no navegador</small></div></div>
+            <button id="settingsInstallBtn" class="secondary wide hidden" type="button" onclick="installPwa()">Instalar neste dispositivo</button>
+            <button class="primary wide" type="button" onclick="checkSystemUpdate(true)">Verificar atualização</button>
+          </div>
+          <div class="panel notification-settings-panel">
+            <div class="panel-head"><div><h3>Notificações</h3><p class="panel-subtitle">Alertas exibidos automaticamente pelo sistema.</p></div></div>
+            <div class="notification-preferences">
+              <div><span class="pref-dot red"></span><div><strong>Estoque zerado</strong><small>Alerta crítico automático.</small></div></div>
+              <div><span class="pref-dot amber"></span><div><strong>Estoque mínimo</strong><small>Aviso quando atingir ou ficar abaixo do mínimo.</small></div></div>
+              <div><span class="pref-dot blue"></span><div><strong>Assinatura pendente</strong><small>Avisa sobre fichas ainda não assinadas.</small></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="movementModal"><div class="modal-card"><div class="modal-head"><h3 id="movementModalTitle">Registrar entrega / devolução</h3><button onclick="closeModal('movementModal')">×</button></div>
+    <form id="movementForm" class="form-grid"><input id="mMovementId" type="hidden">
+      <label>Tipo<select id="mType" required><option>Entrega</option><option>Devolução</option></select></label>
+      <label class="autocomplete-field">Colaborador<input id="mEmployeeSearch" autocomplete="off" placeholder="Comece a digitar o nome..." required><input id="mEmployeeId" type="hidden"><div id="mEmployeeSuggestBox" class="autocomplete-menu hidden"></div></label>
+      <label>Usina<input id="mPlant" readonly></label><label>Quantidade<input id="mQty" type="number" min="1" value="1" required></label>
+      <label>EPI<select id="mEpi" required></select></label><label>Tamanho<select id="mSize" required></select></label>
+      <label>Data/Hora<input id="mDate" type="datetime-local" required></label><label>Status de assinatura<select id="mSignature" required><option value="ASSINADO">Assinado</option><option value="PENDENTE">Pendente</option></select></label>
+      <label id="returnDispositionWrap" class="hidden">Destino da devolução<select id="mReturnDisposition"><option value="REESTOQUE">Reaproveitável — retornar ao estoque</option><option value="DESCARTE">Descarte — não retornar ao estoque</option></select></label>
+      <label class="full">Observações<textarea id="mObs" placeholder="Opcional"></textarea></label>
+      <div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('movementModal')">Cancelar</button><button id="movementSaveButton" class="primary" type="submit">Salvar movimentação</button></div>
+    </form></div></div>
+  <div class="modal" id="signatureModal"><div class="modal-card small"><div class="modal-head"><h3>Alterar status da assinatura</h3><button onclick="closeModal('signatureModal')">×</button></div>
+    <form id="signatureForm" class="form-grid"><input id="signatureMovementId" type="hidden"><label class="full">Status<select id="signatureStatus"><option value="ASSINADO">Assinado</option><option value="PENDENTE">Pendente</option></select></label><div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('signatureModal')">Cancelar</button><button class="primary">Salvar</button></div></form>
+  </div></div>
+
+  <div class="modal" id="employeeModal"><div class="modal-card"><div class="modal-head"><h3 id="employeeModalTitle">Novo colaborador</h3><button onclick="closeModal('employeeModal')">×</button></div>
+    <form id="employeeForm" class="form-grid"><input id="eId" type="hidden"><label class="full">Nome completo<input id="eName" required></label><label>Matrícula<input id="eReg" required></label><label>Função<input id="eRole" required></label><label>Usina<select id="ePlant" required></select></label><label>Admissão<input id="eAdmission" type="date" required></label><div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('employeeModal')">Cancelar</button><button id="employeeSaveButton" class="primary">Cadastrar</button></div></form>
+  </div></div>
+  <div class="modal" id="epiModal"><div class="modal-card"><div class="modal-head"><h3 id="epiModalTitle">Novo EPI</h3><button onclick="closeModal('epiModal')">×</button></div>
+    <form id="epiForm" class="form-grid"><input id="pId" type="hidden"><label>Usina<select id="pPlant" required></select></label><label>Nome do EPI<input id="pName" required></label><label>C.A.<input id="pCA" required></label><label>Unidade<select id="pUnit"><option>Unidade</option><option>Par</option><option>Kit</option><option>Caixa</option><option>Pacote</option></select></label><label class="full">Tamanhos disponíveis<input id="pSizes" placeholder="Ex.: P, M, G ou 38, 40, 42"></label><label>Quantidade em estoque<input id="pStock" type="number" min="0" value="0" required></label><label>Estoque mínimo<input id="pMinStock" type="number" min="0" value="0" required></label><div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('epiModal')">Cancelar</button><button class="primary" id="epiSaveButton">Cadastrar</button></div></form>
+  </div></div>
+
+  <div class="modal" id="plantModal"><div class="modal-card small"><div class="modal-head"><h3>Nova usina</h3><button onclick="closeModal('plantModal')">×</button></div><form id="plantForm" class="form-grid"><label class="full">Nome<input id="uName" required></label><div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('plantModal')">Cancelar</button><button class="primary">Cadastrar</button></div></form></div></div>
+
+  <div class="modal" id="userApprovalModal"><div class="modal-card small">
+    <div class="modal-head"><div><span class="section-kicker">LIBERAÇÃO DE ACESSO</span><h3>Aprovar usuário</h3></div><button onclick="closeModal('userApprovalModal')">×</button></div>
+    <div class="approval-user-preview"><div id="approvalAvatar" class="user-avatar avatar-initials">U</div><div><strong id="approvalUserName">Usuário</strong><small id="approvalUserEmail">-</small></div></div>
+    <form id="userApprovalForm" class="form-grid">
+      <input id="approvalUserId" type="hidden">
+      <label class="full">Função<select id="approvalRole" required><option value="">Selecione a função</option><option value="ADMINISTRADOR">Administrador</option><option value="SSMA">SSMA</option><option value="VISUALIZADOR">Visualizador</option></select></label>
+      <label class="full">Usina / Unidade<select id="approvalPlant" required></select></label>
+      <div class="approval-note full">O usuário só terá acesso após esta aprovação. A liberação ficará registrada no Log de Auditoria.</div>
+      <div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('userApprovalModal')">Cancelar</button><button class="primary" type="submit">Aprovar acesso</button></div>
+    </form>
+  </div></div>
+
+  <div class="modal" id="userEditModal"><div class="modal-card small"><div class="modal-head"><h3>Editar usuário</h3><button onclick="closeModal('userEditModal')">×</button></div><form id="userEditForm" class="form-grid"><input id="editUserId" type="hidden"><label class="full">Nome<input id="editUserName" required></label><label class="full">Foto do usuário<input id="editUserPhotoFile" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="user-photo-editor full"><div class="user-photo-preview"><img id="editUserPhotoPreview" alt="Foto do usuário"></div><div><strong>Foto do perfil</strong><small>A imagem será reduzida automaticamente.</small><button id="removeUserPhoto" class="text-button" type="button">Remover foto</button></div></div><div class="modal-actions full"><button type="button" class="secondary" onclick="closeModal('userEditModal')">Cancelar</button><button class="primary">Salvar alterações</button></div></form></div></div>
+
+
+  <div class="modal" id="employeeHistoryModal">
+    <div class="modal-card history-modal-card">
+      <div class="modal-head">
+        <div>
+          <h3 id="employeeHistoryTitle">Histórico do colaborador</h3>
+          <p id="employeeHistoryMeta" class="modal-subtitle"></p>
+        </div>
+        <button onclick="closeModal('employeeHistoryModal')">×</button>
+      </div>
+      <div class="employee-profile-hero">
+        <div class="employee-profile-main">
+          <div id="employeeHistoryAvatar" class="employee-history-avatar">EP</div>
+          <div><strong id="employeeHistoryNameHero">Colaborador</strong><span id="employeeHistoryRoleHero">Função • Usina</span></div>
+        </div>
+        <div class="employee-qr-card">
+          <img id="employeeQrImage" alt="QR Code do colaborador">
+          <small>QR da ficha</small>
+          <div class="employee-qr-actions">
+            <button id="employeeDownloadQr" type="button">Baixar PNG</button>
+            <button id="employeePrintQr" type="button">Imprimir QR</button>
+          </div>
+        </div>
+      </div>
+      <div id="employeeHistorySummary" class="history-summary"></div>
+      <div class="employee-history-actions">
+        <button class="primary" type="button" id="employeeQuickDelivery">+ Registrar entrega</button>
+        <button class="secondary" type="button" id="employeeQuickReturn">↩ Registrar devolução</button>
+        <button class="secondary" type="button" id="employeePrintSheet">Imprimir ficha</button>
+      </div>
+      <div class="table-wrap history-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Tipo</th>
+              <th>EPI</th>
+              <th>Qtd.</th>
+              <th>Tamanho</th>
+              <th>Destino devolução</th>
+              <th>Assinatura</th>
+              <th>Observações</th>
+            </tr>
+          </thead>
+          <tbody id="employeeHistoryTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal" id="pendingSignaturesModal"><div class="modal-card history-modal-card"><div class="modal-head"><div><h3>Assinaturas pendentes</h3><p class="modal-subtitle">Movimentações que ainda aguardam assinatura física.</p></div><button onclick="closeModal('pendingSignaturesModal')">×</button></div><div class="table-wrap"><table><thead><tr><th>Data</th><th>Colaborador</th><th>Usina</th><th>EPI</th><th>Tipo</th><th>Ação</th></tr></thead><tbody id="pendingSignaturesTable"></tbody></table></div></div></div>
+
+  <div class="modal" id="globalSearchModal">
+    <div class="modal-card search-modal-card">
+      <div class="modal-head">
+        <div><h3>Busca geral</h3><p class="modal-subtitle">Encontre colaboradores, EPIs e movimentações.</p></div>
+        <button onclick="closeModal('globalSearchModal')">×</button>
+      </div>
+      <input id="globalSearchInput" class="global-search-input" placeholder="Digite nome, matrícula, EPI, C.A. ou usina..." autocomplete="off">
+      <div id="globalSearchResults" class="global-search-results"></div>
+    </div>
+  </div>
+
+
+  <div id="notificationBackdrop" class="notification-backdrop hidden" onclick="closeNotificationPanel()"></div>
+  <aside id="notificationPanel" class="notification-panel">
+    <div class="notification-panel-head"><div><span class="section-kicker">CENTRAL</span><h3>Notificações</h3></div><div class="notification-head-actions"><button id="markAllNotificationsBtn" type="button" class="notification-read-all" onclick="markAllNotificationsRead()">Marcar todas como lidas</button><button type="button" class="icon-close-btn" onclick="closeNotificationPanel()">×</button></div></div>
+    <div class="notification-summary">
+      <div><strong id="notificationCriticalCount">0</strong><span>Críticas</span></div>
+      <div><strong id="notificationWarningCount">0</strong><span>Atenção</span></div>
+      <div><strong id="notificationInfoCount">0</strong><span>Informativas</span></div>
+    </div>
+    <div id="notificationList" class="notification-list"></div>
+  </aside>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+<script type="module" src="app.js?v=2.0.3"></script>
+</body>
+</html>
