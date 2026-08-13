@@ -1,0 +1,287 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logged() {
+      return request.auth != null;
+    }
+
+    function userExists() {
+      return logged()
+        && exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        );
+    }
+
+    function currentUser() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)
+      ).data;
+    }
+
+    function active() {
+      return userExists()
+        && currentUser().status == "ATIVO";
+    }
+
+    function isOwner() {
+      return active()
+        && (
+          currentUser().isOwner == true
+          || currentUser().role == "PROPRIETARIO"
+        );
+    }
+
+    function isAdministrator() {
+      return active()
+        && currentUser().role == "ADMINISTRADOR";
+    }
+
+    // Compatibilidade temporária com perfis antigos.
+    function isLegacySSMA() {
+      return active()
+        && currentUser().role == "SSMA";
+    }
+
+    function isLegacyViewer() {
+      return active()
+        && currentUser().role == "VISUALIZADOR";
+    }
+
+    function canOperate() {
+      return isOwner()
+        || isAdministrator()
+        || isLegacySSMA();
+    }
+
+    function canView() {
+      return canOperate()
+        || isLegacyViewer();
+    }
+
+    // Compatibilidade com usuários antigos que ainda possuem somente plantId.
+    function hasLegacyPlant(plantId) {
+      return currentUser().plantId == plantId
+        || currentUser().plantId == "TODAS";
+    }
+
+    // Novo modelo: uma, várias ou todas as usinas.
+    function hasPlantAccess(plantId) {
+      return isOwner()
+        || hasLegacyPlant(plantId)
+        || (
+          currentUser().plantIds is list
+          && (
+            currentUser().plantIds.hasAny(["TODAS"])
+            || currentUser().plantIds.hasAny([plantId])
+          )
+        );
+    }
+
+
+    // SISTEMA
+    match /system/{document} {
+      allow read, write: if isOwner();
+    }
+
+
+    // CONFIGURAÇÕES
+    match /settings/{document} {
+      allow read: if active();
+      allow create, update, delete: if isOwner();
+    }
+
+
+    // USUÁRIOS / AUTOCADASTRO
+    match /users/{uid} {
+
+      allow read: if logged()
+        && (
+          request.auth.uid == uid
+          || isOwner()
+        );
+
+      allow create: if logged()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'jobTitle',
+          'email',
+          'status',
+          'role',
+          'plantId',
+          'plantIds',
+          'isOwner',
+          'photoUrl',
+          'createdAt',
+          'requestedAt',
+          'hierarchyVersion'
+        ])
+        && request.resource.data.status == "PENDENTE"
+        && request.resource.data.role == ""
+        && request.resource.data.plantId == ""
+        && request.resource.data.plantIds is list
+        && request.resource.data.plantIds.size() == 0
+        && request.resource.data.isOwner == false
+        && request.resource.data.email == request.auth.token.email;
+
+      // O Proprietário pode aprovar, bloquear e definir
+      // uma, várias ou todas as usinas do Administrador.
+      //
+      // O próprio usuário ativo edita somente dados
+      // pessoais/profissionais, foto e presença.
+      allow update: if isOwner()
+
+        || (
+          request.auth.uid == uid
+          && resource.data.status == "ATIVO"
+          && request.resource.data
+            .diff(resource.data)
+            .affectedKeys()
+            .hasOnly([
+              'name',
+              'jobTitle',
+              'photoUrl',
+              'lastSeenAt',
+              'lastSeenDevice',
+              'updatedAt',
+              'updatedBy'
+            ])
+        );
+
+      allow delete: if isOwner();
+    }
+
+
+    // USINAS
+    match /plants/{plantId} {
+
+      allow read: if active()
+        && hasPlantAccess(plantId);
+
+      allow create, update, delete: if isOwner();
+    }
+
+
+    // COLABORADORES
+    match /employees/{employeeId} {
+
+      allow read: if canView()
+        && hasPlantAccess(resource.data.plantId);
+
+      allow create: if canOperate()
+        && hasPlantAccess(request.resource.data.plantId);
+
+      allow update: if canOperate()
+        && hasPlantAccess(resource.data.plantId)
+        && hasPlantAccess(request.resource.data.plantId);
+
+      allow delete: if isOwner()
+        || (
+          isAdministrator()
+          && hasPlantAccess(resource.data.plantId)
+        );
+    }
+
+
+    // EPIs
+    match /epis/{epiId} {
+
+      allow read: if canView()
+        && hasPlantAccess(resource.data.plantId);
+
+      allow create: if canOperate()
+        && hasPlantAccess(request.resource.data.plantId);
+
+      allow update: if canOperate()
+        && hasPlantAccess(resource.data.plantId)
+        && hasPlantAccess(request.resource.data.plantId);
+
+      allow delete: if isOwner()
+        || (
+          isAdministrator()
+          && hasPlantAccess(resource.data.plantId)
+        );
+    }
+
+
+    // ESTOQUE ANTIGO
+    match /stock/{stockId} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+
+    // ENTREGAS / DEVOLUÇÕES
+    match /movements/{movementId} {
+
+      allow read: if canView()
+        && hasPlantAccess(resource.data.plantId);
+
+      allow create: if canOperate()
+        && hasPlantAccess(request.resource.data.plantId);
+
+      allow update: if canOperate()
+        && hasPlantAccess(resource.data.plantId)
+        && hasPlantAccess(request.resource.data.plantId);
+
+      allow delete: if isOwner()
+        || (
+          isAdministrator()
+          && hasPlantAccess(resource.data.plantId)
+        );
+    }
+
+
+    // AUDITORIA
+    match /auditLogs/{logId} {
+
+      allow read: if isOwner();
+
+      allow create: if active();
+
+      allow delete: if isOwner();
+
+      allow update: if false;
+    }
+
+
+    // NOTIFICAÇÕES
+    match /notifications/{notificationId} {
+
+      allow read: if active();
+
+      allow create, update: if canOperate();
+
+      allow delete: if isOwner();
+    }
+
+
+    // ESTADO DAS NOTIFICAÇÕES
+    // Sincroniza notificações lidas entre celular, PC e PWA.
+    match /notificationStates/{uid} {
+
+      allow read: if active()
+        && request.auth.uid == uid;
+
+      allow create, update: if active()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'readKeys',
+          'updatedAt'
+        ])
+        && request.resource.data.readKeys is list
+        && request.resource.data.readKeys.size() <= 500;
+
+      allow delete: if active()
+        && request.auth.uid == uid;
+    }
+
+
+    // BLOQUEIO PADRÃO
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
